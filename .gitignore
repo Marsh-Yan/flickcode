@@ -1,0 +1,38 @@
+# Python bytecode and build outputs
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.coverage
+coverage.xml
+htmlcov/
+
+# Local environments and test artifacts
+.venv/
+.tmp/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local agent/editor settings and runtime state
+.claude/
+.agents/
+.flickcode/
+sessions/
+*.db
+*.sqlite
+*.sqlite3
+
+# Credentials and private keys
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+credentials.json
+service-account*.json

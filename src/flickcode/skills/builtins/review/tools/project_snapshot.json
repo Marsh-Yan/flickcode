@@ -1,0 +1,12 @@
+{
+  "name": "review_project_snapshot",
+  "description": "Summarize project file counts and bytes by extension",
+  "input_schema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "entrypoint": "scripts/project_snapshot.py"
+}
+

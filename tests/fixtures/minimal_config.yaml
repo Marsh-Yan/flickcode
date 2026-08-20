@@ -1,0 +1,8 @@
+providers:
+  - name: test
+    protocol: openai
+    model: test-model
+    base_url: https://example.invalid/v1
+    api_key: test-key
+    thinking: false
+mcp_servers: {}

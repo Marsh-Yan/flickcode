@@ -1,0 +1,30 @@
+hooks:
+  - name: session-context
+    event: session.started
+    action:
+      type: prompt
+      content: "Session {{session.id}} started."
+
+  - name: command-policy
+    event: tool.before
+    if:
+      all:
+        - field: tool.name
+          exact: execute_command
+        - field: tool.arguments.command
+          glob: "git *"
+    action:
+      type: shell
+      command: "python tests/fixtures/hooks/decide.py allow"
+      timeout: 5
+
+  - event: turn.ended
+    async: true
+    action:
+      type: http
+      url: "https://example.invalid/hooks"
+      method: POST
+      body:
+        session: "{{session.id}}"
+        reason: "{{turn.stop_reason}}"
+      timeout: 2

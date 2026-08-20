@@ -1,0 +1,13 @@
+{
+  "name": "fixture-echo",
+  "description": "Echo a value from a fixture",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "value": {"type": "string"}
+    },
+    "required": ["value"]
+  },
+  "entrypoint": "scripts/echo.py"
+}
+

@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "flickcode"
+version = "0.1.0"
+description = "A lightweight CLI AI coding agent for terminal conversations with LLMs"
+requires-python = ">=3.8"
+authors = [
+    {name = "FlickCode"},
+]
+dependencies = [
+    "anthropic>=0.49.0",
+    "openai>=1.55.0",
+    "pyyaml>=6.0",
+    "prompt_toolkit>=3.0.48",
+    "rich>=13.9",
+    "typing-extensions>=4.12.0",
+]
+
+[project.scripts]
+flick = "flickcode.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/flickcode/flickcode"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/flickcode"]
+artifacts = [
+    "src/flickcode/skills/builtins/**/*.md",
+    "src/flickcode/skills/builtins/**/*.json",
+    "src/flickcode/skills/builtins/**/*.py",
+    "src/flickcode/subagents/builtins/**/*.md",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true

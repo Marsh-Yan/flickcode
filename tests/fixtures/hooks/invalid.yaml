@@ -1,0 +1,23 @@
+hooks:
+  - name: missing-action
+    event: turn.started
+
+  - name: mixed-logic
+    event: tool.before
+    if:
+      all:
+        - field: tool.name
+          exact: execute_command
+      any:
+        - field: tool.name
+          glob: "*"
+    action:
+      type: shell
+      command: "exit 0"
+
+  - name: async-interceptor
+    event: tool.before
+    async: true
+    action:
+      type: shell
+      command: "exit 0"
