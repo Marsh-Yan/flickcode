@@ -1,67 +1,65 @@
 # FlickCode
 
-A lightweight CLI AI coding agent for terminal conversations with LLMs.
+> 轻量、可扩展的终端 AI 编程助手。
+> A lightweight, extensible CLI coding agent for terminal conversations with LLMs.
 
-> **⚠️ Early development stage.** Interfaces and local file formats may still evolve.
+[中文](#中文说明) · [English](#english)
 
-## Features
+> **项目状态 / Project status**：早期开发阶段。公共接口、命令细节和本地数据格式可能随版本演进。
+> Early-stage software. Public APIs, command details, and local data formats may change between releases.
 
-- **Interactive TUI** — Multi-line input, command history, streaming output
-- **Multi-provider** — Supports Anthropic Claude and OpenAI
-- **Claude Extended Thinking** — View Claude's reasoning chain in the terminal
-- **Streaming** — See responses token by token, no waiting for full generation
-- **Extensible** — Unified provider interface for adding new backends
-- **Reusable Skills** — Markdown SOPs with lazy loading, scoped tools, and shared or isolated execution
-- **Lifecycle Hooks** — Declarative event rules for commands, prompt injection, HTTP callbacks, and tool interception
-- **Isolated SubAgents** — Delegate defined roles or cached conversation forks through one stable tool
-- **Git Worktree isolation** — Defined roles can opt into per-task Worktrees with explicit cwd propagation, bootstrap rules, and safe cleanup
+## 中文说明
 
-### Worktree-isolated SubAgents
+### 简介
 
-Add `isolation: worktree` to a defined role's frontmatter when the role must
-work in its own Git Worktree. The default is `shared`; Fork SubAgents always
-remain shared. Worktrees are created under `.flickcode/worktrees/` and are
-removed automatically only when clean and free of unpushed commits. A retained
-Worktree's absolute path and reason are included in the task status/result.
+FlickCode 是一个基于 Python 的终端 AI 编程助手，提供交互式 TUI、流式模型输出和本地工具调用能力。它可通过 MCP、Skills、Hooks、SubAgents、持久化 Teams 和 Git Worktree 隔离进行扩展。
 
-Project-local setup is opt-in through `.flickcode/worktrees.yaml`:
+### 核心能力
 
-```yaml
-version: 1
-expiry_days: 7
-bootstrap:
-  copy: [".local/config.toml"]
-  symlink: ["node_modules"]
-  ignored: [".cache/*.json"]
-```
+| 能力 | 说明 |
+| --- | --- |
+| 交互式 TUI | 支持多行输入、历史记录、流式输出、命令补全和快捷键。 |
+| 多模型提供商 | 支持 Anthropic 兼容与 OpenAI 兼容的配置。 |
+| 上下文管理 | 根据用量估算上下文，自动或手动压缩，并把过大的工具结果外置保存。 |
+| MCP | 启动时发现本地或远程的 Model Context Protocol 工具。 |
+| Skills | 通过 Markdown SOP 定义按需加载、工具范围受限的共享或隔离能力。 |
+| Hooks | 通过声明式规则注入提示词、运行 shell/HTTP 动作或拦截工具调用。 |
+| SubAgents | 支持固定角色和会话分叉，支持前台/后台运行、结果存储与通知。 |
+| Teams | 支持持久化团队、任务依赖、邮箱、锁、审批以及窗格/进程内后端。 |
+| Worktree 隔离 | 固定角色可选用每任务 Git Worktree，并带有初始化和安全清理机制。 |
+| 本地优先安全 | 包含权限控制、项目可信任机制、路径沙箱、会话恢复和项目/用户记忆。 |
 
-## Installation
+## 环境要求
 
-### Prerequisites
+- Python 3.8 或更高版本
+- 推荐使用 [uv](https://docs.astral.sh/uv/)，也可使用 `pip`
+- 至少配置一个模型提供商的 API Key
 
-- Python 3.8+
-- `uv` (recommended) or `pip`
+## 安装
 
-### Install with uv
+### 使用 uv（推荐）
 
 ```bash
-# Install from local source
-cd flick
+git clone https://github.com/Marsh-Yan/flickcode.git
+cd flickcode
 uv sync
+uv run flick --help
 ```
 
-### Install with pip
+### 使用 pip
 
 ```bash
-cd flick
-pip install -e .
+git clone https://github.com/Marsh-Yan/flickcode.git
+cd flickcode
+python -m pip install -e .
+flick --help
 ```
 
-## Configuration
+## 配置
 
-FlickCode uses a YAML configuration file at `~/.flickcode/config.yaml`.
+首次运行时，FlickCode 会在 `~/.flickcode/config.yaml` 创建配置模板；也可通过 `--config PATH` 指定其他配置文件。
 
-On first run, a template configuration is automatically created. Edit it with your API keys:
+不要将真实密钥写入仓库。以下示例使用环境变量引用：
 
 ```yaml
 providers:
@@ -69,33 +67,90 @@ providers:
     protocol: anthropic
     model: claude-sonnet-4-20250514
     base_url: https://api.anthropic.com
-    api_key: your-anthropic-api-key-here
+    api_key: "${ANTHROPIC_API_KEY}"
     thinking: false
 
   - name: gpt
     protocol: openai
     model: gpt-4o
     base_url: https://api.openai.com/v1
-    api_key: your-openai-api-key-here
+    api_key: "${OPENAI_API_KEY}"
 ```
 
-### Configuration fields
+启动前在 shell 中设置对应变量：
 
-| Field      | Required | Description                                    |
-|------------|----------|------------------------------------------------|
-| `name`     | Yes      | Unique identifier for this provider entry      |
-| `protocol` | Yes      | `anthropic` or `openai`                        |
-| `model`    | Yes      | Model name (e.g., `claude-sonnet-4-20250514`)  |
-| `base_url` | Yes      | API endpoint URL                               |
-| `api_key`  | Yes      | Authentication key                             |
-| `thinking` | No       | Enable Claude Extended Thinking (`true`/`false`)|
+```bash
+# macOS / Linux
+export ANTHROPIC_API_KEY='your-key'
+export OPENAI_API_KEY='your-key'
+```
 
-### MCP servers
+```powershell
+# PowerShell
+$env:ANTHROPIC_API_KEY = 'your-key'
+$env:OPENAI_API_KEY = 'your-key'
+```
 
-FlickCode can discover external MCP tools at startup. Declare servers as a map
-under `mcp_servers` in `~/.flickcode/config.yaml` or the project-level
-`.flickcode/config.yaml`. Project entries with the same server name replace the
-user-level entry.
+| 配置项 | 是否必填 | 说明 |
+| --- | --- | --- |
+| `name` | 是 | 提供商唯一名称，供 `--provider` 使用。 |
+| `protocol` | 是 | `anthropic` 或 `openai`。 |
+| `model` | 是 | 提供商模型标识。 |
+| `base_url` | 是 | API 端点基础 URL。 |
+| `api_key` | 是 | 密钥或 `${环境变量}` 引用。 |
+| `thinking` | 否 | 在支持时启用 Anthropic 扩展思考。 |
+
+## 基础用法
+
+```bash
+# 使用配置中的第一个提供商
+flick
+
+# 使用指定名称的提供商
+flick --provider gpt
+
+# 使用其他配置文件
+flick --config /path/to/config.yaml
+
+# 查看版本或帮助
+flick --version
+flick --help
+```
+
+### 快捷键
+
+| 快捷键 | 操作 |
+| --- | --- |
+| `Meta+Enter` | 发送当前多行消息。 |
+| `Ctrl+C` | 取消当前操作，或确认退出。 |
+| `Ctrl+D` | 立即退出。 |
+| `Ctrl+B` | 分离当前前台 SubAgent。 |
+| `上` / `下` | 浏览输入历史。 |
+| `Tab` | 补全斜杠命令。 |
+
+### 内置斜杠命令
+
+在 TUI 中输入 `/help` 或 `/help <command>` 可查看当前完整说明。
+
+| 命令 | 用途 |
+| --- | --- |
+| `/plan [task]`、`/do` | 开始规划，或执行当前规划。 |
+| `/compact` | 手动压缩对话上下文。 |
+| `/clear`、`/reset` | 清空终端显示，或重置会话状态。 |
+| `/session`、`/resume <id>` | 列出并恢复已保存会话。 |
+| `/memory` | 查看项目和用户记忆状态。 |
+| `/permission` | 查看权限与可信任状态。 |
+| `/status` | 显示安全的运行状态快照。 |
+| `/agent` | 管理 SubAgent 任务并读取结果。 |
+| `/team` | 创建、打开、查看或离开持久化 Team。 |
+| `/commit`、`/review`、`/test`、`/audit` | 内置 Skill 命令（被发现后可用）。 |
+| `/exit` 或 `/quit` | 退出交互会话。 |
+
+## 扩展能力
+
+### MCP 服务器
+
+可在用户配置或项目级 `.flickcode/config.yaml` 中声明 MCP 服务器。若同名，项目级定义会覆盖用户级定义。
 
 ```yaml
 mcp_servers:
@@ -113,16 +168,35 @@ mcp_servers:
       Authorization: "Bearer ${SEARCH_TOKEN}"
 ```
 
-Environment variables use `${VAR}` syntax. An undefined variable or a failed
-server connection only disables that server; FlickCode continues starting and
-reports the skipped server. Discovered tools are registered as
-`mcp__<server>__<tool>` and use the normal Agent tool-call flow.
+环境变量缺失或服务器连接失败时，FlickCode 会报告并跳过该服务器，不会阻止主程序启动。发现的工具会注册为 `mcp__<server>__<tool>`。
 
-### Lifecycle Hooks
+### Skills
 
-Hooks are loaded from `~/.flickcode/hooks.yaml`, `.flick/hooks.yaml`, and
-`.flick/hooks.local.yaml`. Project hooks require trust in interactive sessions.
-Each rule declares an event, an optional condition, and an action:
+Skills 是包含 YAML frontmatter 的 Markdown SOP，按以下优先级发现：
+
+1. `<项目>/.flickcode/skills/`
+2. `~/.flickcode/skills/`
+3. 内置 `flickcode/skills/builtins/`
+
+共享模式 Skill 示例：
+
+```markdown
+---
+name: explain-change
+description: Explain a code change for reviewers.
+tools:
+  - read_file
+  - grep
+mode: shared
+---
+Inspect the relevant files and explain: {{input}}
+```
+
+有效的 Skill 会变成如 `/explain-change` 的斜杠命令。它们可以在主对话中以 `shared` 方式运行，也可以在受限子对话中以 `isolated` 方式运行；目录式 Skill 还可包含 JSON 工具定义与 Python 脚本。
+
+### 生命周期 Hooks
+
+Hooks 从 `~/.flickcode/hooks.yaml`、`.flick/hooks.yaml` 与 `.flick/hooks.local.yaml` 加载。项目内 Hook 需要先在交互会话中被信任。
 
 ```yaml
 hooks:
@@ -135,296 +209,435 @@ hooks:
         - field: tool.arguments.command
           regex: "(?i)production"
     action:
-      type: shell
-      command: >-
-        python -c "import json; print(json.dumps({'allow': False,
-        'reason': 'production commands require manual approval'}))"
-      timeout: 5
-
-  - event: turn.started
-    action:
       type: prompt
-      prompt: "Keep changes focused on {{ project.path }}."
+      prompt: "Confirm that production operations are authorized."
       scope: turn
 ```
 
-Supported actions are `shell`, `prompt`, `http`, and the reserved `subagent`
-placeholder. Rules may set `once`, `async`, and action-specific `timeout`
-controls; interception events reject asynchronous actions. Hook failures are
-logged and never stop the main Agent flow. Use `/status` to inspect loaded rules
-and recent Hook diagnostics.
+支持 `shell`、`prompt`、`http` 和保留的 `subagent` 动作。拦截事件不支持异步动作；非致命 Hook 错误会被报告，但不会中断主 Agent。
 
-### SubAgents
+### SubAgents、Worktrees 与 Teams
 
-The model uses one stable `agent` tool for both delegation styles and task
-management. A `defined` SubAgent starts with a clean conversation and a fixed
-role prompt; a `fork` inherits the last completed parent request prefix and is
-always sent to the background. Background completions inject one bounded
-notification into the next parent request. Retrieve the full output with
-`/agent result <task-id>` or the tool's `result` operation.
+稳定的 `agent` 工具支持两种委派模式：
 
-Roles are Markdown files discovered in this order (highest priority first):
+- **Defined** SubAgent 使用固定角色提示词和干净历史启动。
+- **Fork** SubAgent 继承已完成父请求的前缀，并始终在后台运行。
+- 可使用 `/agent status <task-id>`、`/agent result <task-id>`、`/agent cancel <task-id>` 管理任务。
 
-1. `<project>/.flickcode/agents/`
-2. `~/.flickcode/agents/`
-3. bundled roles
-4. configured plugin role directories
-
-```markdown
----
-name: investigator
-description: Inspect a problem without changing files.
-tools:
-  allow: [read_file, glob, grep]
-  deny: [write_file, edit_file, execute_command]
-model: inherit
-max_turns: 15
-permission_mode: strict
----
-You are a focused read-only investigator. Return concise evidence.
-```
-
-Optional configuration:
+固定角色可在 frontmatter 中加入 `isolation: worktree` 来启用隔离。Worktree 位于 `.flickcode/worktrees/`，只有在干净且不存在未推送提交时才会自动清理。
 
 ```yaml
-subagents:
-  max_workers: 4
-  max_pending: 16
-  foreground_timeout_seconds: 30
-  shutdown_timeout_seconds: 5
-  result_storage_dir: .tmp/subagents
-  background_allowed_tools: []
-  additional_denied_tools: []
-  plugin_role_dirs: []
-  model_aliases:
-    haiku: claude-haiku
-    sonnet: claude-sonnet
-    opus: claude-opus
+# .flickcode/worktrees.yaml
+version: 1
+expiry_days: 7
+bootstrap:
+  copy: [".local/config.toml"]
+  symlink: ["node_modules"]
+  ignored: [".cache/*.json"]
 ```
 
-An empty background allow-list adds no restriction; `agent` and `load_skill`
-are still always removed from child tool views. Child results and context
-artifacts default to the project-local `.tmp/subagents/` directory.
+Teams 会持久保存成员身份、消息、任务、依赖关系、审批与运行快照：
 
-## Usage
+```text
+/team create release-prep
+/team status
+/team leave
+```
+
+启动持久化 Team 成员进程时可使用 `flick --team NAME --team-member MEMBER_ID`。
+
+## 上下文、会话与记忆
+
+FlickCode 会在每次模型请求前估算上下文用量。过大的工具输出可以外置保存，旧历史可以在保留最近消息的前提下被摘要压缩；`/compact` 可请求手动压缩。
+
+项目指令按以下顺序加载：
+
+1. 项目根目录的 `AGENTS.md`
+2. 项目内的 `.flickcode/AGENTS.md`
+3. 当前用户的 `~/.flickcode/AGENTS.md`
+
+会话以 JSONL 文件保存在项目的 `sessions/` 目录。长期记忆保存在项目 `memory/` 或用户级 `~/.flickcode/memory/` 中。两者均属于本地运行数据，已被项目 `.gitignore` 排除。
+
+## 安全建议
+
+- 使用环境变量或本地未跟踪配置文件保存密钥。
+- 不要提交 `.env`、私钥、会话归档、`.flickcode/` 运行状态或本地编辑器/Agent 设置。
+- 信任项目前请先审查其中的 shell 或 HTTP Hook。
+- MCP 服务器和 Skills 可能执行你显式启用的能力；安装第三方定义前请先审计。
+
+## 开发
+
+### 运行测试
 
 ```bash
-# Start interactive chat (uses first provider in config)
-flick
+python -m unittest discover -s tests -v
+```
 
-# Use a specific provider
-flick --provider gpt
+### 项目结构
 
-# Use a custom config file
-flick --config /path/to/config.yaml
+```text
+src/flickcode/
+├── commands/      # 斜杠命令解析与分发
+├── context/       # 上下文估算、压缩与结果存储
+├── hooks/         # 生命周期 Hook 加载与执行
+├── mcp/           # MCP 传输、客户端与工具适配
+├── memory/        # 项目指令、笔记与更新
+├── permissions/   # 信任、权限与沙箱策略
+├── providers/     # Anthropic 与 OpenAI 提供商适配器
+├── skills/        # Skill 发现、解析与执行
+├── subagents/     # 委派与任务生命周期
+├── teams/         # 持久化协作运行时
+├── tools/         # 内置本地工具
+└── worktrees/     # Git Worktree 生命周期管理
+tests/             # 单元与集成测试
+docs/              # 设计、计划、任务与检查清单文档
+```
 
-# Show version
-flick --version
+### 添加新提供商
 
-# Show help
+1. 新建 `src/flickcode/providers/your_provider.py`。
+2. 实现提供商约定，包括流式对话支持。
+3. 在 `src/flickcode/providers/__init__.py` 中注册协议。
+4. 在 `tests/` 中添加聚焦测试。
+
+## 贡献
+
+请保持改动聚焦；变更行为时补充或更新测试；不要提交密钥或本地生成状态。提交 Pull Request 前请运行完整测试集。
+
+## 许可证
+
+当前仓库未包含许可证文件。在项目所有者发布许可证前，请不要假定代码具有可自由复用的授权。
+
+---
+
+## English
+
+### Overview
+
+FlickCode is a Python command-line coding agent with an interactive terminal
+UI. It streams model responses, invokes local tools, and can be extended with
+MCP servers, Skills, Hooks, SubAgents, durable Teams, and optional Git
+Worktree isolation.
+
+### Highlights
+
+| Capability | What it provides |
+| --- | --- |
+| Interactive TUI | Multi-line input, history, streaming output, command completion, and keyboard controls. |
+| Multiple providers | Anthropic-compatible and OpenAI-compatible provider configurations. |
+| Context management | Usage-aware context estimation, automatic/manual compaction, and external storage for oversized tool results. |
+| MCP | Startup discovery of local or remote Model Context Protocol tools. |
+| Skills | Lazy-loaded Markdown operating procedures with scoped tool access and shared or isolated execution. |
+| Hooks | Declarative lifecycle rules for prompts, shell/HTTP actions, and tool interception. |
+| SubAgents | Defined roles and conversation forks, foreground/background execution, result storage, and notifications. |
+| Teams | Durable teams with task dependencies, mailboxes, locks, approvals, and pane or in-process backends. |
+| Worktree isolation | Optional per-task Git Worktrees for defined SubAgent roles, with bootstrap and safe cleanup rules. |
+| Local-first safety | Permission controls, project trust, path sandboxing, session recovery, and project/user memory. |
+
+## Requirements
+
+- Python 3.8 or newer
+- [uv](https://docs.astral.sh/uv/) (recommended) or `pip`
+- An API key for at least one configured provider
+
+## Installation
+
+### With uv (recommended)
+
+```bash
+git clone https://github.com/Marsh-Yan/flickcode.git
+cd flickcode
+uv sync
+uv run flick --help
+```
+
+### With pip
+
+```bash
+git clone https://github.com/Marsh-Yan/flickcode.git
+cd flickcode
+python -m pip install -e .
 flick --help
 ```
 
-### Key bindings
+## Configuration
 
-| Key            | Action                    |
-|----------------|---------------------------|
-| `Meta+Enter`   | Send message              |
-| `Ctrl+C`       | Cancel / Confirm quit     |
-| `Ctrl+D`       | Exit immediately          |
-| `/exit`/`/quit`| Exit from input prompt    |
-| `/compact`     | Compact conversation context manually |
-| `Ctrl+B`       | Detach an active foreground SubAgent (interactive control API) |
-| `↑`/`↓`        | Navigate input history    |
+On its first run, FlickCode creates a template at
+`~/.flickcode/config.yaml`. Use `--config PATH` to select another file.
 
-### Slash commands
+Never put a real key in a repository. The example below expands values from
+environment variables instead:
 
-Commands are handled locally before ordinary text reaches the Agent. Use `/help`
-to see the complete list and `/help <command>` for details. Built-in commands
-include `/compact`, `/clear`, `/reset`, `/plan`, `/do`, `/session`, `/memory`,
-`/permission`, `/status`, and `/agent`. Use `/agent status <task-id>`,
-`/agent result <task-id>`, or `/agent cancel <task-id>` for local task control.
-Valid Skills are added dynamically as commands;
-the bundled set provides `/commit`, `/review`, and `/test`. `/audit` delegates
-to the currently effective `review` Skill.
+```yaml
+providers:
+  - name: claude
+    protocol: anthropic
+    model: claude-sonnet-4-20250514
+    base_url: https://api.anthropic.com
+    api_key: "${ANTHROPIC_API_KEY}"
+    thinking: false
 
-`/plan <task>` starts planning immediately. `/plan` without a task switches the
-prompt to `[PLAN]` mode for subsequent messages. `/do` executes the existing plan
-and returns to `[DEFAULT]`. `/sessions` remains an alias for `/session`, and
-`/resume <session-id>` restores a saved conversation. Press Tab to complete a
-slash command.
+  - name: gpt
+    protocol: openai
+    model: gpt-4o
+    base_url: https://api.openai.com/v1
+    api_key: "${OPENAI_API_KEY}"
+```
+
+Set the values in your shell before starting FlickCode:
+
+```bash
+# macOS / Linux
+export ANTHROPIC_API_KEY='your-key'
+export OPENAI_API_KEY='your-key'
+```
+
+```powershell
+# PowerShell
+$env:ANTHROPIC_API_KEY = 'your-key'
+$env:OPENAI_API_KEY = 'your-key'
+```
+
+| Provider field | Required | Description |
+| --- | --- | --- |
+| `name` | Yes | Unique provider identifier used by `--provider`. |
+| `protocol` | Yes | `anthropic` or `openai`. |
+| `model` | Yes | Provider model identifier. |
+| `base_url` | Yes | API endpoint base URL. |
+| `api_key` | Yes | Key or `${ENVIRONMENT_VARIABLE}` reference. |
+| `thinking` | No | Enables Anthropic extended thinking when supported. |
+
+## Basic usage
+
+```bash
+# Use the first configured provider
+flick
+
+# Select a named provider
+flick --provider gpt
+
+# Use an alternate configuration file
+flick --config /path/to/config.yaml
+
+# Inspect the installed version or options
+flick --version
+flick --help
+```
+
+### Keyboard controls
+
+| Key | Action |
+| --- | --- |
+| `Meta+Enter` | Send the current multi-line message. |
+| `Ctrl+C` | Cancel the current operation or confirm quitting. |
+| `Ctrl+D` | Exit immediately. |
+| `Ctrl+B` | Detach an active foreground SubAgent. |
+| `Up` / `Down` | Browse input history. |
+| `Tab` | Complete a slash command. |
+
+### Built-in slash commands
+
+Use `/help` or `/help <command>` in the TUI for the current command details.
+
+| Command | Purpose |
+| --- | --- |
+| `/plan [task]` and `/do` | Start planning or execute the active plan. |
+| `/compact` | Compact conversation context manually. |
+| `/clear` and `/reset` | Clear terminal output or reset the session state. |
+| `/session`, `/resume <id>` | List and restore saved conversations. |
+| `/memory` | Inspect project and user memory state. |
+| `/permission` | Inspect permission and trust state. |
+| `/status` | Show a safe runtime snapshot. |
+| `/agent` | Manage SubAgent tasks and retrieve results. |
+| `/team` | Create, open, inspect, or leave a durable Team. |
+| `/commit`, `/review`, `/test`, `/audit` | Bundled Skill commands (available when discovered). |
+| `/exit` or `/quit` | Leave the interactive session. |
+
+## Extensibility
+
+### MCP servers
+
+Declare MCP servers in the user configuration or in a project-level
+`.flickcode/config.yaml`. Project servers with the same name override the
+user-level declaration.
+
+```yaml
+mcp_servers:
+  local_files:
+    transport: stdio
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+    env:
+      API_KEY: "${MCP_API_KEY}"
+
+  remote_search:
+    transport: streamable_http
+    url: "https://example.com/mcp"
+    headers:
+      Authorization: "Bearer ${SEARCH_TOKEN}"
+```
+
+Undefined environment variables and unavailable servers are reported and
+skipped; they do not prevent FlickCode from starting. Discovered tools are
+registered as `mcp__<server>__<tool>`.
 
 ### Skills
 
-A Skill packages a reusable AI operation as YAML frontmatter plus a Markdown
-SOP. FlickCode discovers definitions from three locations, highest priority
-first:
+Skills are Markdown SOPs with YAML frontmatter. FlickCode searches these
+locations from highest to lowest priority:
 
 1. `<project>/.flickcode/skills/`
 2. `~/.flickcode/skills/`
-3. the built-in `flickcode/skills/builtins/` package directory
+3. Bundled `flickcode/skills/builtins/`
 
-An invalid higher-priority file is diagnosed and skipped, so a valid lower
-definition can still be used. Same-name definitions in one tier are all
-excluded from that tier. Other valid Skills continue to load.
-
-A standalone Skill is a direct `*.md` child of a skills directory:
+Example shared Skill:
 
 ```markdown
 ---
 name: explain-change
-description: Explain a code change for reviewers
+description: Explain a code change for reviewers.
 tools:
   - read_file
   - grep
 mode: shared
 ---
-Inspect the relevant code and explain this request: {{input}}
+Inspect the relevant files and explain: {{input}}
 ```
 
-`name` must match `^[a-z][a-z0-9-]*$`. `description` is one line, and
-`tools` is the complete visible-tool whitelist. `mode` is `shared` or
-`isolated`. Isolated Skills additionally require a non-negative `history`
-count and may specify `model`; shared Skills cannot specify either field. Every
-literal `{{input}}` in the SOP is replaced with the raw slash-command/tool
-input.
+Valid Skills become slash commands such as `/explain-change`. They may run in
+the main conversation (`shared`) or a bounded child conversation (`isolated`).
+Directory Skills may additionally package JSON tool schemas and Python scripts.
 
-Directory Skills are immediate child directories with this layout:
+### Lifecycle Hooks
 
-```text
-my-skill/
-├── SKILL.md
-├── tools/
-│   └── lookup.json
-└── scripts/
-    └── lookup.py
-```
-
-Each tool JSON declares `name`, `description`, a complete object
-`input_schema`, and a relative Python `entrypoint`. FlickCode snapshots the
-script source while parsing and executes that immutable text with JSON on
-stdin/stdout, a 60-second timeout, no shell, and a minimal environment. Scripts
-must not depend on `__file__`, package-relative imports, or bundled runtime
-resources in this release.
-
-Skill loading is two-stage. At startup the model sees only each name and one-line
-description. The always-visible system tool `load_skill` loads the complete SOP
-and any package tools only when needed. Active shared SOPs are pinned into every
-subsequent system prompt. With active shared Skills, visible tools are the union
-of their whitelists plus `load_skill`; PLAN mode further intersects that set
-with read-only tools. Schema generation, unknown-tool checks, and execution use
-one immutable view for an entire Agent iteration.
-
-Shared Skills continue in the main conversation, and multiple shared Skills can
-remain active together. Isolated Skills copy only the configured number of
-recent complete user/assistant/tool turns, optionally use a different model,
-and run in a child conversation. Their full records are stored under
-`sessions/children/*.jsonl`; only the invocation and a bounded summary return to
-the main history.
-
-Every valid Skill is also available as `/<name> [input]`. Discovery refreshes
-lazily before input, loading, and completion, so adding or editing a definition
-does not require restart. Refresh is transactional across the catalog, active
-runtime, and command registry. An invalid edit to an active Skill keeps its last
-valid snapshot; deleting it selects a lower-priority fallback or deactivates it.
-
-`/clear` only clears terminal output. `/reset` archives the boundary, creates a
-new session ID, and clears messages, plan state, and active Skills while keeping
-the catalog, provider, MCP connections, and memory. Skill activation events are
-stored in the main session archive and replayed against current definitions on
-`/resume`.
-
-This release intentionally does not include a Skill marketplace, remote
-distribution, dependency resolution, or Skill version management.
-
-### Context management
-
-FlickCode stores oversized tool output under `~/.flickcode/context/` and
-replaces it in conversation history with a preview and recovery path. Before
-each provider request, it estimates context from the latest API usage and new
-message characters. When needed it summarizes older history while retaining
-recent messages. Use `/compact` in the interactive TUI to request compaction
-before the automatic threshold is reached.
-
-The optional `context` configuration block controls these limits:
+Hooks are loaded from `~/.flickcode/hooks.yaml`, `.flick/hooks.yaml`, and
+`.flick/hooks.local.yaml`. Project Hooks require project trust in the
+interactive session.
 
 ```yaml
-context:
-  context_window_tokens: 128000
-  max_output_tokens: 8192
-  single_tool_result_chars: 24000
-  message_tool_result_chars: 48000
-  chars_per_token: 4
-  storage_dir: "~/.flickcode/context"
+hooks:
+  - name: protect-production
+    event: tool.before
+    if:
+      all:
+        - field: tool.name
+          exact: shell
+        - field: tool.arguments.command
+          regex: "(?i)production"
+    action:
+      type: prompt
+      prompt: "Confirm that production operations are authorized."
+      scope: turn
 ```
 
-Automatic compaction reserves a 13K-token safety margin. Manual `/compact`
-uses a 3K-token margin. Context artifacts are recovery aids for the active
-conversation and are not project source files.
+Supported actions are `shell`, `prompt`, `http`, and the reserved `subagent`
+placeholder. Interception events do not allow asynchronous actions; non-fatal
+Hook failures are reported without stopping the main Agent.
 
-### Project instructions, sessions, and memory
+### SubAgents, Worktrees, and Teams
 
-At startup FlickCode reads optional Markdown instructions in this order:
+The stable `agent` tool supports both defined roles and conversation forks:
 
-1. `AGENTS.md` at the project root;
-2. `.flickcode/AGENTS.md` in the project;
-3. `~/.flickcode/AGENTS.md` for the current user.
+- **Defined** SubAgents start from a fixed role prompt and clean history.
+- **Fork** SubAgents inherit a completed parent request prefix and always run
+  in the background.
+- Use `/agent status <task-id>`, `/agent result <task-id>`, and
+  `/agent cancel <task-id>` to control tasks.
 
-Project instructions are placed before user instructions in the system prompt.
-An instruction file can include another Markdown file with
-`@include relative/path.md`. Includes are limited in depth, reject cycles, and
-cannot leave the project root (or `~/.flickcode` for user instructions).
+Defined roles can opt into isolation by adding `isolation: worktree` to their
+frontmatter. Worktrees live under `.flickcode/worktrees/` and are cleaned up
+only when they are clean and have no unpushed commits.
 
-Conversation events are appended to `sessions/<session-id>.jsonl` inside the
-current project. FlickCode never resumes a previous conversation automatically:
+```yaml
+# .flickcode/worktrees.yaml
+version: 1
+expiry_days: 7
+bootstrap:
+  copy: [".local/config.toml"]
+  symlink: ["node_modules"]
+  ignored: [".cache/*.json"]
+```
+
+Teams persist member identities, messages, tasks, dependency state, approvals,
+and runtime snapshots:
 
 ```text
-/sessions                 # list saved project conversations
-/resume 20260813-163000-a1b2
+/team create release-prep
+/team status
+/team leave
 ```
 
-`/resume` skips malformed JSONL lines and drops incomplete tool-call tails so
-that the restored history is valid for the provider. If a restored conversation
-was inactive for more than seven days, FlickCode adds a reminder to re-check
-time-sensitive state. Archives older than 30 days are cleaned up during startup;
-only managed `sessions/*.jsonl` files are candidates.
+Use `flick --team NAME --team-member MEMBER_ID` when starting a durable Team
+member process.
 
-Long-term notes live separately in `memory/` for the project and
-`~/.flickcode/memory/` for the user. Each note is Markdown with frontmatter and
-is one of: user preference, correction feedback, project knowledge, or reference.
-Their bounded `index.md` files (at most 200 lines / 25 KB) are injected before
-each request, project index first. After an Agent Loop naturally ends with a
-tool-free final answer, FlickCode updates these notes asynchronously; it never
-delays the visible final response. This release intentionally does not provide
-vector databases, embeddings, RAG retrieval, or team-memory synchronization.
+## Context, sessions, and memory
 
-## Project Structure
+FlickCode estimates context usage on every provider request. It can store large
+tool outputs outside the conversation and summarize older history while keeping
+recent messages. `/compact` requests a manual compaction.
 
+Project instructions are loaded in this order:
+
+1. `AGENTS.md` in the project root
+2. `.flickcode/AGENTS.md` in the project
+3. `~/.flickcode/AGENTS.md` for the current user
+
+Sessions are stored as JSONL files under the project `sessions/` directory.
+Long-term notes live under the project `memory/` directory or
+`~/.flickcode/memory/`. Treat both locations as local runtime data, not source
+code; they are ignored by the included `.gitignore`.
+
+## Security notes
+
+- Keep keys in environment variables or a local untracked config file.
+- Do not commit `.env`, private keys, session archives, `.flickcode/` runtime
+  state, or local editor/agent settings.
+- Review any shell or HTTP Hook before trusting a project.
+- MCP servers and Skills can execute capabilities you explicitly enable; audit
+  third-party definitions before installation.
+
+## Development
+
+### Run the test suite
+
+```bash
+python -m unittest discover -s tests -v
 ```
-flick/
-├── pyproject.toml
-├── README.md
-└── src/
-    └── flick/
-        ├── __init__.py           # Package metadata
-        ├── __main__.py           # python -m flick entry
-        ├── cli.py                # Argument parsing
-        ├── config.py             # YAML configuration management
-        ├── session.py            # Conversation orchestration
-        ├── tui.py                # Interactive terminal UI
-        └── providers/
-            ├── __init__.py       # Provider factory
-            ├── base.py           # Abstract base class
-            ├── anthropic.py      # Anthropic Claude provider
-            └── openai.py         # OpenAI provider
+
+### Project layout
+
+```text
+src/flickcode/
+├── commands/      # Slash-command parsing and dispatch
+├── context/       # Context estimation, compaction, and result storage
+├── hooks/         # Lifecycle Hook loading and execution
+├── mcp/           # MCP transports, clients, and tool adapters
+├── memory/        # Project instructions, notes, and updates
+├── permissions/   # Trust, permission, and sandbox policies
+├── providers/     # Anthropic and OpenAI provider adapters
+├── skills/        # Skill discovery, parsing, and execution
+├── subagents/     # Delegation and task lifecycle
+├── teams/         # Durable collaboration runtime
+├── tools/         # Built-in local tools
+└── worktrees/     # Git Worktree lifecycle management
+tests/             # Unit and integration tests
+docs/              # Design, plan, task, and checklist documents
 ```
 
-## Adding a New Provider
+### Add a provider
 
-1. Create `src/flick/providers/your_provider.py`
-2. Implement `YourProvider(BaseProvider)` with a `stream_chat()` method
-3. Update `src/flick/providers/__init__.py` `create_provider()` to handle your protocol name
+1. Create `src/flickcode/providers/your_provider.py`.
+2. Implement the provider contract, including streaming chat support.
+3. Register the protocol in `src/flickcode/providers/__init__.py`.
+4. Add focused tests under `tests/`.
+
+## Contributing
+
+Please keep changes focused, add or update tests for behavior changes, and
+avoid committing secrets or generated local state. Run the test suite before
+opening a pull request.
 
 ## License
 
-MIT
+No license file is currently included. Do not assume reuse rights until the
+project owner publishes a license.
